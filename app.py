@@ -1,6 +1,7 @@
 import os
 import random
 import sqlite3
+import unicodedata
 from pathlib import Path
 from typing import List
 
@@ -10,6 +11,10 @@ from itsdangerous import BadSignature, URLSafeSerializer
 
 BASE_DIR = Path(__file__).parent
 DEFAULT_DB = BASE_DIR / "data" / "thingmenn.db"
+PREFIX = os.environ.get("THINGMADURINN_PREFIX", "").rstrip("/")
+if PREFIX and not PREFIX.startswith("/"):
+    PREFIX = "/" + PREFIX
+STATIC_URL_PATH = f"{PREFIX}/static" if PREFIX else "/static"
 
 
 def get_database_path() -> Path:
@@ -31,7 +36,12 @@ def get_secret() -> str:
     return os.environ.get("FLASK_SECRET_KEY", "change-me")
 
 
-app = Flask(__name__, template_folder="templates", static_folder="static")
+app = Flask(
+    __name__,
+    template_folder="templates",
+    static_folder="static",
+    static_url_path=STATIC_URL_PATH,
+)
 serializer = URLSafeSerializer(get_secret(), salt="thingmadurinn")
 app.config["SECRET_KEY"] = get_secret()
 
@@ -46,10 +56,10 @@ def fetch_random_member(conn: sqlite3.Connection) -> sqlite3.Row:
 
 
 def guess_gender(name: str) -> str:
-    lower = name.lower()
-    if lower.endswith("dóttir"):
+    normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii").lower()
+    if normalized.endswith("dottir"):
         return "female"
-    if lower.endswith("son"):
+    if normalized.endswith("son"):
         return "male"
     return ""
 
