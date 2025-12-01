@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="is">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hver er þingmaðurinn?</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="page">
+    <header class="hero">
+        <div>
+            <p class="eyebrow">Spurningaleikur</p>
+            <h1>Hver er þingmaðurinn?</h1>
+            <p class="lede">Við sýnum mynd af þingmanni og þú velur nafnið sem passar.</p>
+        </div>
+        <div class="pill">
+            <span aria-hidden="true">🙂</span>
+            <div>
+                <p class="pill-title">Léttur leikur</p>
+                <p class="pill-text">Hversu mörgum nærðu í röð?</p>
+            </div>
+        </div>
+    </header>
+
+    <section class="card" aria-live="polite">
+        <div class="image-frame">
+            <img id="member-photo" alt="" src="" loading="lazy">
+        </div>
+        <div class="question">
+            <p class="prompt">Veldu nafnið sem passar við myndina.</p>
+            <div id="options" class="options" role="group" aria-label="Svarmöguleikar"></div>
+        </div>
+        <p id="status" class="status" role="status"></p>
+        <p id="streak" class="streak" aria-live="polite">Röð rétt svarað: 0</p>
+        <div class="actions">
+            <button id="next-round" class="ghost" type="button" disabled>Næsta mynd</button>
+        </div>
+    </section>
+</main>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

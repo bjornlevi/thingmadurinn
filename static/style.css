@@ -1,0 +1,221 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap");
+
+:root {
+    --bg: #0f172a;
+    --panel: #0b1222;
+    --accent: #4ade80;
+    --accent-strong: #22c55e;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: rgba(148, 163, 184, 0.4);
+    --shadow: 0 25px 60px rgba(15, 23, 42, 0.45);
+    --radius: 20px;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Space Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 20% 20%, rgba(74, 222, 128, 0.08), transparent 35%),
+                radial-gradient(circle at 80% 30%, rgba(56, 189, 248, 0.08), transparent 30%),
+                linear-gradient(135deg, #0b1222 0%, #111827 100%);
+    color: var(--text);
+    padding: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.page {
+    width: min(1100px, 100%);
+    display: grid;
+    gap: 24px;
+}
+
+.hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    padding: 20px 24px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow);
+}
+
+.eyebrow {
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin: 0 0 6px 0;
+}
+
+h1 {
+    margin: 0 0 10px 0;
+    font-size: clamp(32px, 4vw, 44px);
+    line-height: 1.1;
+}
+
+.lede {
+    margin: 0;
+    color: var(--muted);
+    font-size: 1.05rem;
+    max-width: 60ch;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(74, 222, 128, 0.08);
+    border: 1px solid rgba(74, 222, 128, 0.4);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.pill-title {
+    margin: 0;
+    color: var(--text);
+}
+
+.pill-text {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.card {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    padding: 20px;
+    background: var(--panel);
+    border-radius: calc(var(--radius) + 4px);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+}
+
+.image-frame {
+    background: linear-gradient(135deg, rgba(74, 222, 128, 0.12), rgba(59, 130, 246, 0.12));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-frame img {
+    width: 100%;
+    max-width: 360px;
+    border-radius: calc(var(--radius) - 6px);
+    background: #0f172a;
+    object-fit: cover;
+}
+
+.question {
+    display: grid;
+    gap: 12px;
+}
+
+.prompt {
+    margin: 0;
+    color: var(--muted);
+    font-size: 1rem;
+}
+
+.options {
+    display: grid;
+    gap: 12px;
+}
+
+button {
+    font: inherit;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+button:hover,
+button:focus-visible {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    outline: none;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.option.correct {
+    border-color: var(--accent);
+    background: rgba(74, 222, 128, 0.1);
+}
+
+.option.wrong {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.status {
+    min-height: 24px;
+    margin: 0;
+    color: var(--muted);
+}
+
+.streak {
+    margin: 4px 0 0 0;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.status.positive {
+    color: var(--accent);
+}
+
+.status.negative {
+    color: #f87171;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.ghost {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+@media (max-width: 720px) {
+    body {
+        padding: 18px;
+    }
+
+    .hero {
+        flex-direction: column;
+    }
+
+    .card {
+        grid-template-columns: 1fr;
+    }
+}
