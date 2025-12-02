@@ -106,6 +106,31 @@ h1 {
     box-shadow: var(--shadow);
 }
 
+.meta {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.meta-item {
+    margin: 0;
+    font-weight: 600;
+}
+
+.meta-item.timer {
+    color: var(--accent);
+}
+
+.meta-item.high-score {
+    color: var(--muted);
+}
+
 .image-frame {
     background: linear-gradient(135deg, rgba(74, 222, 128, 0.12), rgba(59, 130, 246, 0.12));
     border: 1px solid var(--border);
