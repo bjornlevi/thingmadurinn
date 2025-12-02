@@ -5,12 +5,16 @@ import unicodedata
 from pathlib import Path
 from typing import List
 
+from dotenv import load_dotenv
 from flask import Flask, abort, jsonify, render_template, request
 from itsdangerous import BadSignature, URLSafeSerializer
 
 
 BASE_DIR = Path(__file__).parent
 DEFAULT_DB = BASE_DIR / "data" / "thingmenn.db"
+
+# Load .env if present (helps when systemd EnvironmentFile is not picked up)
+load_dotenv(BASE_DIR / ".env", override=False)
 PREFIX = os.environ.get("THINGMADURINN_PREFIX", "").rstrip("/")
 if PREFIX and not PREFIX.startswith("/"):
     PREFIX = "/" + PREFIX
