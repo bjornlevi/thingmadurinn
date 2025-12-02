@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Hver er þingmaðurinn?</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=asset_version) }}">
 </head>
 <body data-base="{{ request.script_root|default('') }}">
 <main class="page">
@@ -61,6 +61,6 @@
     </section>
 </main>
 
-<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js', v=asset_version) }}"></script>
 </body>
 </html>

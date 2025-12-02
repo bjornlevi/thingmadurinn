@@ -1,6 +1,7 @@
 import os
 import random
 import sqlite3
+import time
 import unicodedata
 from pathlib import Path
 from typing import List, Sequence
@@ -43,6 +44,15 @@ app = Flask(
 )
 serializer = URLSafeSerializer(get_secret(), salt="thingmadurinn")
 app.config["SECRET_KEY"] = get_secret()
+
+
+def get_asset_version() -> str:
+    """Use mtime of static files to bust caches (helps when behind nginx)."""
+    candidates = [BASE_DIR / "static" / "app.js", BASE_DIR / "static" / "style.css"]
+    try:
+        return str(int(max(path.stat().st_mtime for path in candidates if path.exists())))
+    except ValueError:
+        return str(int(time.time()))
 
 
 def fetch_random_member(conn: sqlite3.Connection) -> sqlite3.Row:
@@ -134,7 +144,7 @@ def fetch_options(conn: sqlite3.Connection, correct_id: int, limit: int = 3, gen
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", asset_version=get_asset_version())
 
 
 @app.route("/api/question")
