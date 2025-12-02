@@ -3,7 +3,7 @@ import random
 import sqlite3
 import unicodedata
 from pathlib import Path
-from typing import List
+from typing import List, Sequence
 
 from dotenv import load_dotenv
 from flask import Flask, abort, jsonify, render_template, request
@@ -61,6 +61,59 @@ def guess_gender(name: str) -> str:
     if normalized.endswith("son"):
         return "male"
     return ""
+
+
+def ensure_high_scores_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS high_scores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            initials TEXT NOT NULL,
+            score INTEGER NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.commit()
+
+
+def prune_high_scores(conn: sqlite3.Connection, limit: int = 10) -> None:
+    conn.execute(
+        """
+        DELETE FROM high_scores
+        WHERE id NOT IN (
+            SELECT id FROM high_scores
+            ORDER BY score DESC, created_at ASC
+            LIMIT ?
+        )
+        """,
+        (limit,),
+    )
+    conn.commit()
+
+
+def get_high_scores(conn: sqlite3.Connection, limit: int = 10) -> Sequence[sqlite3.Row]:
+    ensure_high_scores_table(conn)
+    rows = conn.execute(
+        """
+        SELECT initials, score, created_at
+        FROM high_scores
+        ORDER BY score DESC, created_at ASC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    return rows
+
+
+def add_high_score(conn: sqlite3.Connection, initials: str, score: int) -> None:
+    ensure_high_scores_table(conn)
+    conn.execute(
+        "INSERT INTO high_scores (initials, score) VALUES (?, ?)",
+        (initials, score),
+    )
+    conn.commit()
+    prune_high_scores(conn)
 
 
 def fetch_options(conn: sqlite3.Connection, correct_id: int, limit: int = 3, gender: str = "") -> List[sqlite3.Row]:
@@ -138,6 +191,44 @@ def guess():
     is_correct = str(guess_id) == str(correct_id)
 
     return jsonify({"correct": is_correct, "answer_id": correct_id})
+
+
+@app.route("/api/high-scores", methods=["GET", "POST"])
+def high_scores():
+    try:
+        conn = get_connection()
+    except FileNotFoundError as exc:
+        abort(503, description=str(exc))
+
+    try:
+        if request.method == "GET":
+            rows = get_high_scores(conn)
+            scores = [{"initials": row["initials"], "score": row["score"]} for row in rows]
+            return jsonify({"high_scores": scores})
+
+        payload = request.get_json(force=True, silent=True)
+        if not payload or "initials" not in payload or "score" not in payload:
+            abort(400, description="Missing high score payload.")
+
+        try:
+            score_val = int(payload.get("score", 0))
+        except (TypeError, ValueError):
+            abort(400, description="Invalid score value.")
+
+        initials_raw = str(payload.get("initials", "")).strip()
+        initials = "".join(list(initials_raw)[:3]) or "---"
+
+        if score_val <= 0:
+            abort(400, description="Score must be positive.")
+
+        add_high_score(conn, initials, score_val)
+        rows = get_high_scores(conn)
+        scores = [{"initials": row["initials"], "score": row["score"]} for row in rows]
+        return jsonify({"high_scores": scores})
+    except sqlite3.DatabaseError:
+        abort(500, description="Database error.")
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":

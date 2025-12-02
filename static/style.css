@@ -112,15 +112,20 @@ h1 {
     justify-content: space-between;
     gap: 12px;
     align-items: center;
-    padding: 10px 12px;
+    padding: 14px 16px;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: rgba(255, 255, 255, 0.02);
+    border-radius: calc(var(--radius) + 2px);
+    background: linear-gradient(120deg, rgba(74, 222, 128, 0.08), rgba(59, 130, 246, 0.12));
 }
 
-.meta-item {
+.meta-item,
+.meta-label {
     margin: 0;
-    font-weight: 600;
+}
+
+.meta-label {
+    color: var(--muted);
+    font-size: 0.9rem;
 }
 
 .meta-item.timer {
@@ -129,6 +134,50 @@ h1 {
 
 .meta-item.high-score {
     color: var(--muted);
+}
+
+.timer-block {
+    display: grid;
+    gap: 6px;
+    min-width: 220px;
+}
+
+.timer-display {
+    display: grid;
+    gap: 8px;
+}
+
+.timer-value {
+    font-weight: 700;
+    font-size: clamp(24px, 4vw, 32px);
+    color: var(--accent);
+}
+
+.timer-bar {
+    position: relative;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.timer-bar span {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(90deg, var(--accent), #38bdf8);
+    transition: width 0.25s linear;
+}
+
+.high-score-block {
+    text-align: right;
+}
+
+.high-score {
+    font-weight: 700;
+    color: var(--text);
 }
 
 .image-frame {
@@ -229,6 +278,45 @@ button:disabled {
 .ghost {
     background: transparent;
     border-color: rgba(255, 255, 255, 0.16);
+}
+
+.leaderboard {
+    grid-column: 1 / -1;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 4px);
+    background: rgba(255, 255, 255, 0.03);
+    display: grid;
+    gap: 8px;
+}
+
+.leaderboard-title {
+    margin: 0;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.leaderboard-list {
+    list-style: decimal;
+    margin: 0;
+    padding-left: 0;
+    display: grid;
+    gap: 4px;
+    color: var(--muted);
+    list-style-position: inside;
+}
+
+.leaderboard-list li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.leaderboard-list span {
+    color: var(--muted);
+    font-weight: 500;
 }
 
 @media (max-width: 720px) {

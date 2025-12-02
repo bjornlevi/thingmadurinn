@@ -4,16 +4,19 @@ const statusEl = document.getElementById("status");
 const nextButton = document.getElementById("next-round");
 const streakEl = document.getElementById("streak");
 const timerEl = document.getElementById("timer");
+const timerFill = document.getElementById("timer-fill");
 const highScoreEl = document.getElementById("high-score");
+const leaderboardList = document.getElementById("leaderboard-list");
 const basePath = document.body.dataset.base || "";
+
+const TIMER_LIMIT = 30;
 
 let currentToken = null;
 let locked = false;
 let streak = 0;
 let countdownId = null;
-let timeLeft = 30;
-const HIGH_SCORE_KEY = "thingmadurinn_high_score";
-let highScore = loadHighScore();
+let timeLeft = TIMER_LIMIT;
+let highScores = [];
 
 async function fetchJSON(url, options) {
     const resp = await fetch(url, options);
@@ -35,11 +38,93 @@ function renderStreak() {
 }
 
 function renderTimer() {
-    timerEl.textContent = `Tími: ${timeLeft}s`;
+    const safeTime = Math.max(0, timeLeft);
+    timerEl.textContent = `${safeTime}s`;
+    if (timerFill) {
+        const pct = Math.max(0, Math.min(100, (safeTime / TIMER_LIMIT) * 100));
+        timerFill.style.width = `${pct}%`;
+    }
 }
 
 function renderHighScore() {
-    highScoreEl.textContent = `Metskor: ${highScore.score} — ${highScore.name}`;
+    const best = highScores[0];
+    if (!highScoreEl) return;
+    highScoreEl.textContent = best ? `Metskor: ${best.score} — ${best.initials}` : "Metskor: 0 — ---";
+}
+
+function renderLeaderboard() {
+    if (!leaderboardList) return;
+    leaderboardList.innerHTML = "";
+    if (!highScores.length) {
+        const li = document.createElement("li");
+        li.textContent = "Engin met enn. Gerðu tilraun!";
+        leaderboardList.appendChild(li);
+        return;
+    }
+
+    highScores.forEach((entry) => {
+        const li = document.createElement("li");
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = entry.initials;
+        const scoreSpan = document.createElement("span");
+        scoreSpan.textContent = entry.score;
+        li.appendChild(nameSpan);
+        li.appendChild(scoreSpan);
+        leaderboardList.appendChild(li);
+    });
+}
+
+async function fetchHighScores() {
+    try {
+        const data = await fetchJSON(`${basePath}/api/high-scores`);
+        highScores = data.high_scores || [];
+    } catch (err) {
+        renderStatus(err.message || "Gat ekki sótt metskor.", false, true);
+    } finally {
+        renderHighScore();
+        renderLeaderboard();
+    }
+}
+
+async function submitHighScore(score, initials) {
+    const data = await fetchJSON(`${basePath}/api/high-scores`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ score, initials }),
+    });
+    highScores = data.high_scores || highScores;
+    renderHighScore();
+    renderLeaderboard();
+}
+
+function requestInitials(defaultValue = "---") {
+    const input = prompt("Nýr metárangur! Settu inn þrjá stafi (má vera UTF-8):", defaultValue);
+    if (input === null) return null;
+    const cleaned = Array.from(input.trim()).slice(0, 3).join("");
+    return cleaned || null;
+}
+
+async function maybeSubmitHighScore(runScore) {
+    if (runScore <= 0) return;
+    const minScore = highScores.length < 10 ? 0 : highScores[highScores.length - 1].score;
+    if (runScore < minScore) return;
+
+    const initials = requestInitials(highScores[0]?.initials || "---");
+    if (!initials) return;
+
+    try {
+        await submitHighScore(runScore, initials);
+        renderStatus("Metskor vistaður!", true, false);
+    } catch (err) {
+        renderStatus(err.message || "Tókst ekki að vista met.", false, true);
+    }
+}
+
+function disableOptions() {
+    const buttons = Array.from(optionsEl.querySelectorAll("button.option"));
+    buttons.forEach((btn) => {
+        btn.disabled = true;
+    });
 }
 
 function clearTimer() {
@@ -51,81 +136,38 @@ function clearTimer() {
 
 function startTimer() {
     clearTimer();
-    timeLeft = 30;
+    timeLeft = TIMER_LIMIT;
     renderTimer();
     countdownId = setInterval(() => {
         timeLeft -= 1;
         if (timeLeft <= 0) {
-            handleTimeout();
+            clearTimer();
+            timeLeft = 0;
+            renderTimer();
+            handleTimeout().catch(() => {});
         } else {
             renderTimer();
         }
     }, 1000);
 }
 
-function handleTimeout() {
-    clearTimer();
+async function handleTimeout() {
     if (locked) return;
     locked = true;
-    timeLeft = 0;
+    const finishedRun = streak;
     streak = 0;
-    renderTimer();
-    renderStatus("Tíminn rann út. Röðin endurstillt.", false, true);
     renderStreak();
+    renderStatus("Tíminn rann út. Röðin endurstillt.", false, true);
     disableOptions();
     nextButton.disabled = false;
-}
-
-function disableOptions() {
-    const buttons = Array.from(optionsEl.querySelectorAll("button.option"));
-    buttons.forEach((btn) => {
-        btn.disabled = true;
-    });
-}
-
-function loadHighScore() {
-    const stored = localStorage.getItem(HIGH_SCORE_KEY);
-    if (!stored) {
-        return { score: 0, name: "---" };
-    }
-    try {
-        const parsed = JSON.parse(stored);
-        return {
-            score: Number(parsed.score) || 0,
-            name: typeof parsed.name === "string" && parsed.name.trim() ? parsed.name : "---",
-        };
-    } catch (e) {
-        return { score: 0, name: "---" };
-    }
-}
-
-function saveHighScore() {
-    localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(highScore));
-}
-
-function requestInitials() {
-    const input = prompt("Nýr metárangur! Settu inn þrjá stafi (má vera UTF-8):", highScore.name);
-    if (input === null) {
-        return highScore.name;
-    }
-    const cleaned = Array.from(input.trim()).slice(0, 3).join("");
-    return cleaned || "---";
-}
-
-function maybeUpdateHighScore() {
-    if (streak > highScore.score) {
-        const initials = requestInitials();
-        highScore = { score: streak, name: initials };
-        saveHighScore();
-        renderHighScore();
-    }
+    await maybeSubmitHighScore(finishedRun);
 }
 
 function resetState() {
     locked = false;
     currentToken = null;
     clearTimer();
-    timeLeft = 30;
+    timeLeft = TIMER_LIMIT;
     renderStatus("Veldu nafn til að byrja.");
     nextButton.disabled = true;
     optionsEl.innerHTML = "";
@@ -180,15 +222,17 @@ async function handleGuess(button, guessId) {
 
         if (!result.correct) {
             button.classList.add("wrong");
+            const finishedRun = streak;
             streak = 0;
-            renderStatus("Ekki alveg. Reyndu næst!", false, true);
+            renderStatus("Ekki alveg. Röðin endurstillt.", false, true);
+            renderStreak();
+            await maybeSubmitHighScore(finishedRun);
         } else {
             button.classList.add("correct");
             streak += 1;
             renderStatus("Rétt svar! Vel gert.", true, false);
-            maybeUpdateHighScore();
+            renderStreak();
         }
-        renderStreak();
     } catch (err) {
         renderStatus(err.message || "Villa kom upp við að senda ágiskun.", false, true);
     } finally {
@@ -199,5 +243,5 @@ async function handleGuess(button, guessId) {
 nextButton.addEventListener("click", loadQuestion);
 renderStreak();
 renderTimer();
-renderHighScore();
+fetchHighScores();
 loadQuestion();

@@ -24,9 +24,20 @@
     </header>
 
     <section class="card" aria-live="polite">
-        <div class="meta">
-            <p id="timer" class="meta-item timer" role="status" aria-live="polite">Tími: 30s</p>
-            <p id="high-score" class="meta-item high-score" aria-live="polite">Metskor: 0 — ---</p>
+        <div class="meta" role="status" aria-live="polite">
+            <div class="timer-block">
+                <p class="meta-label">Tími til að svara</p>
+                <div class="timer-display">
+                    <span id="timer" class="timer-value">30s</span>
+                    <div class="timer-bar">
+                        <span id="timer-fill"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="high-score-block">
+                <p class="meta-label">Lengsta röð</p>
+                <p id="high-score" class="meta-item high-score" aria-live="polite">Metskor: 0 — ---</p>
+            </div>
         </div>
         <div class="image-frame">
             <img id="member-photo" alt="" src="" loading="lazy">
@@ -39,6 +50,13 @@
         <p id="streak" class="streak" aria-live="polite">Röð rétt svarað: 0</p>
         <div class="actions">
             <button id="next-round" class="ghost" type="button" disabled>Næsta mynd</button>
+        </div>
+        <div class="leaderboard">
+            <div>
+                <p class="meta-label">Top 10</p>
+                <p class="leaderboard-title">Lengstu runurnar</p>
+            </div>
+            <ol id="leaderboard-list" class="leaderboard-list"></ol>
         </div>
     </section>
 </main>
