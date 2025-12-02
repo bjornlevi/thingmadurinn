@@ -15,10 +15,6 @@ DEFAULT_DB = BASE_DIR / "data" / "thingmenn.db"
 
 # Load .env if present (helps when systemd EnvironmentFile is not picked up)
 load_dotenv(BASE_DIR / ".env", override=False)
-PREFIX = os.environ.get("THINGMADURINN_PREFIX", "").rstrip("/")
-if PREFIX and not PREFIX.startswith("/"):
-    PREFIX = "/" + PREFIX
-STATIC_URL_PATH = f"{PREFIX}/static" if PREFIX else "/static"
 
 
 def get_database_path() -> Path:
@@ -44,7 +40,6 @@ app = Flask(
     __name__,
     template_folder="templates",
     static_folder="static",
-    static_url_path=STATIC_URL_PATH,
 )
 serializer = URLSafeSerializer(get_secret(), salt="thingmadurinn")
 app.config["SECRET_KEY"] = get_secret()
