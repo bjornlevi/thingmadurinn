@@ -49,7 +49,7 @@ function renderTimer() {
 function renderHighScore() {
     const best = highScores[0];
     if (!highScoreEl) return;
-    highScoreEl.textContent = best ? `Metskor: ${best.score} — ${best.initials}` : "Metskor: 0 — ---";
+    highScoreEl.textContent = best ? `Flest rétt: ${best.score} — ${best.initials}` : "Lengsta röð: 0 — ---";
 }
 
 function renderLeaderboard() {
@@ -57,7 +57,7 @@ function renderLeaderboard() {
     leaderboardList.innerHTML = "";
     if (!highScores.length) {
         const li = document.createElement("li");
-        li.textContent = "Engin met enn. Gerðu tilraun!";
+        li.textContent = "Engin met enn. Prófaðu!";
         leaderboardList.appendChild(li);
         return;
     }
@@ -79,7 +79,7 @@ async function fetchHighScores() {
         const data = await fetchJSON(`${basePath}/api/high-scores`);
         highScores = data.high_scores || [];
     } catch (err) {
-        renderStatus(err.message || "Gat ekki sótt metskor.", false, true);
+        renderStatus(err.message || "Gat ekki sótt lengstu röð.", false, true);
     } finally {
         renderHighScore();
         renderLeaderboard();
@@ -98,7 +98,7 @@ async function submitHighScore(score, initials) {
 }
 
 function requestInitials(defaultValue = "---") {
-    const input = prompt("Nýr metárangur! Settu inn þrjá stafi (má vera UTF-8):", defaultValue);
+    const input = prompt("Nýtt met! Settu inn þrjá stafi (má vera UTF-8):", defaultValue);
     if (input === null) return null;
     const cleaned = Array.from(input.trim()).slice(0, 3).join("");
     return cleaned || null;
@@ -114,7 +114,7 @@ async function maybeSubmitHighScore(runScore) {
 
     try {
         await submitHighScore(runScore, initials);
-        renderStatus("Metskor vistaður!", true, false);
+        renderStatus("Lengsta röð vistuð!", true, false);
     } catch (err) {
         renderStatus(err.message || "Tókst ekki að vista met.", false, true);
     }
@@ -157,7 +157,7 @@ async function handleTimeout() {
     const finishedRun = streak;
     streak = 0;
     renderStreak();
-    renderStatus("Tíminn rann út. Röðin endurstillt.", false, true);
+    renderStatus("Tíminn rann út. Reyndu aftur.", false, true);
     disableOptions();
     nextButton.disabled = false;
     await maybeSubmitHighScore(finishedRun);
@@ -224,7 +224,7 @@ async function handleGuess(button, guessId) {
             button.classList.add("wrong");
             const finishedRun = streak;
             streak = 0;
-            renderStatus("Ekki alveg. Röðin endurstillt.", false, true);
+            renderStatus("Ekki alveg. Byrjað upp á nýtt.", false, true);
             renderStreak();
             await maybeSubmitHighScore(finishedRun);
         } else {
