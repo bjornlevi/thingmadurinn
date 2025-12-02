@@ -3,6 +3,7 @@ const optionsEl = document.getElementById("options");
 const statusEl = document.getElementById("status");
 const nextButton = document.getElementById("next-round");
 const streakEl = document.getElementById("streak");
+const basePath = document.body.dataset.base || "";
 
 let currentToken = null;
 let locked = false;
@@ -40,7 +41,7 @@ function resetState() {
 async function loadQuestion() {
     resetState();
     try {
-        const data = await fetchJSON("/api/question");
+        const data = await fetchJSON(`${basePath}/api/question`);
         currentToken = data.token;
         photo.src = data.image_url;
         photo.alt = "Mynd af þingmanni. Veldu nafnið.";
@@ -64,7 +65,7 @@ async function handleGuess(button, guessId) {
     locked = true;
 
     try {
-        const result = await fetchJSON("/api/guess", {
+        const result = await fetchJSON(`${basePath}/api/guess`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token: currentToken, answer: guessId }),

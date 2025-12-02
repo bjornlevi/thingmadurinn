@@ -6,7 +6,7 @@
     <title>Hver er þingmaðurinn?</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body data-base="{{ request.script_root|default('') }}">
 <main class="page">
     <header class="hero">
         <div>
