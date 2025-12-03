@@ -2,6 +2,7 @@ import argparse
 import re
 import sqlite3
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 from urllib.parse import urljoin
@@ -11,6 +12,7 @@ import requests
 
 
 LIST_URL = "https://www.althingi.is/altext/xml/thingmenn/"
+THINGSETA_URL_TEMPLATE = "https://www.althingi.is/altext/xml/thingmenn/thingmadur/thingseta/?nr={id}"
 IMG_BASE = "https://www.althingi.is/myndir/thingmenn-cache/"
 CV_URL_TEMPLATE = "https://www.althingi.is/altext/cv/is/?nfaerslunr={id}"
 ROOT_TAG = "þingmannalisti"
@@ -30,6 +32,21 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS memberships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            member_id INTEGER NOT NULL,
+            thing INTEGER NOT NULL,
+            flokkur_id INTEGER,
+            flokkur TEXT,
+            start_date TEXT,
+            end_date TEXT,
+            UNIQUE(member_id, thing, flokkur_id, start_date, end_date),
+            FOREIGN KEY(member_id) REFERENCES members(id)
+        )
+        """
+    )
     conn.commit()
 
 
@@ -44,6 +61,61 @@ def extract_image_url(html: str) -> Optional[str]:
     if not match:
         return None
     return urljoin("https://www.althingi.is", match.group("src"))
+
+
+def normalize_date(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    try:
+        return datetime.strptime(cleaned, "%d.%m.%Y").date().isoformat()
+    except ValueError:
+        return cleaned
+
+
+def parse_int(value: Optional[str]) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def fetch_member_thingseta(member_id: int) -> list[dict]:
+    url = THINGSETA_URL_TEMPLATE.format(id=member_id)
+    resp = requests.get(url, timeout=30)
+    resp.raise_for_status()
+    root = ElementTree.fromstring(resp.content)
+
+    entries = []
+    for node in root.findall(".//þingseta"):
+        thing_value = parse_int((node.findtext("þing") or "").strip())
+        if thing_value is None:
+            continue
+
+        flokkur_node = node.find("þingflokkur")
+        flokkur_name = (flokkur_node.text or "").strip() if flokkur_node is not None else ""
+        flokkur_id = parse_int(flokkur_node.attrib.get("id")) if flokkur_node is not None else None
+
+        timabil_node = node.find("tímabil")
+        start_date = normalize_date(timabil_node.findtext("inn") if timabil_node is not None else None)
+        end_date = normalize_date(timabil_node.findtext("út") if timabil_node is not None else None)
+
+        entries.append(
+            {
+                "member_id": member_id,
+                "thing": thing_value,
+                "flokkur_id": flokkur_id,
+                "flokkur": flokkur_name,
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+        )
+
+    return entries
 
 
 def probe_image(member_id: int) -> Optional[str]:
@@ -118,6 +190,22 @@ def persist_members(conn: sqlite3.Connection, members: Iterable[dict]) -> None:
             )
 
 
+def persist_member_memberships(conn: sqlite3.Connection, member_id: int, entries: Iterable[dict]) -> int:
+    ensure_schema(conn)
+    entries_list = list(entries)
+    with conn:
+        conn.execute("DELETE FROM memberships WHERE member_id = ?", (member_id,))
+        for entry in entries_list:
+            conn.execute(
+                """
+                INSERT INTO memberships (member_id, thing, flokkur_id, flokkur, start_date, end_date)
+                VALUES (:member_id, :thing, :flokkur_id, :flokkur, :start_date, :end_date)
+                """,
+                entry,
+            )
+    return len(entries_list)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Load þingmenn data into SQLite.")
     parser.add_argument(
@@ -138,7 +226,23 @@ def main() -> None:
         members = list(fetch_members(root))
         print("Skrái í gagnagrunn...")
         persist_members(conn, members)
-        print(f"Saved {len(members)} þingmenn to {args.database}")
+
+        print("Sæki þingsetu fyrir hvern þingmann...")
+        total_memberships = 0
+        total_members = len(members)
+        for idx, member in enumerate(members, start=1):
+            try:
+                entries = fetch_member_thingseta(member["id"])
+                total_memberships += persist_member_memberships(conn, member["id"], entries)
+            except Exception as exc:  # pragma: no cover - network variability
+                print(
+                    f"⚠️  Gat ekki sótt þingsetu fyrir {member['name']} ({member['id']}): {exc}",
+                    file=sys.stderr,
+                )
+            if idx % 25 == 0 or idx == total_members:
+                print(f"Þingsetur lokið {idx}/{total_members} þingmönnum.")
+
+        print(f"Saved {len(members)} þingmenn and {total_memberships} þingsetur to {args.database}")
     finally:
         conn.close()
 

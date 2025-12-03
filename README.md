@@ -11,7 +11,8 @@ Lítill Flask-veklingur sem notar SQLite með gögnum frá Althingi til að spyr
 ```bash
 python load_data.py --database data/thingmenn.db
 ```
-Gengur út að sækja XML lista af þingmönnum, nær í mynd slóð úr lífshlaups-síðunni og vistar í SQLite.
+Sækir XML lista af þingmönnum, nær í mynd slóð úr lífshlaups-síðunni, vistar í SQLite og bætir nú við
+þingsetu-gögnum í töflunni `memberships` (þing, þingflokkur, tímabil).
 
 ## Keyra vefforrit
 ```bash
