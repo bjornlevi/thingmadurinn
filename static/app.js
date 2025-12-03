@@ -1,15 +1,41 @@
 const photo = document.getElementById("member-photo");
 const optionsEl = document.getElementById("options");
+const promptEl = document.querySelector(".prompt");
 const statusEl = document.getElementById("status");
 const nextButton = document.getElementById("next-round");
 const streakEl = document.getElementById("streak");
 const timerEl = document.getElementById("timer");
 const timerFill = document.getElementById("timer-fill");
 const highScoreEl = document.getElementById("high-score");
-const leaderboardList = document.getElementById("leaderboard-list");
+const leaderboardGrid = document.getElementById("leaderboard-grid");
+const attemptsList = document.getElementById("attempts-list");
+const clearAttemptsBtn = document.getElementById("clear-attempts");
+const gameLinks = document.querySelectorAll(".game-link");
+const difficultySlider = document.getElementById("difficulty-slider");
+const difficultyValueEl = document.getElementById("difficulty-value");
+const titleEl = document.getElementById("game-title");
+const ledeEl = document.getElementById("game-lede");
 const basePath = document.body.dataset.base || "";
 
 const TIMER_LIMIT = 30;
+const DIFFICULTIES = [2, 3, 4, 5, 6];
+const GAME_COPY = {
+    "who-is": {
+        title: "Hver er þingmaðurinn?",
+        lede: "Við sýnum mynd af þingmanni og þú velur nafnið sem passar.",
+        prompt: "Veldu nafnið sem passar við myndina.",
+    },
+    party: {
+        title: "Í hvaða þingflokki var þingmaðurinn?",
+        lede: "Veldu réttan þingflokk út frá myndinni.",
+        prompt: "Í hvaða þingflokki var þingmaðurinn?",
+    },
+    mixed: {
+        title: "Þekkir þú þingmennina?",
+        lede: "Við skiptum á milli þess að giska á þingmann eða þingflokk.",
+        prompt: "Hvaða spurning kemur núna?",
+    },
+};
 
 let currentToken = null;
 let locked = false;
@@ -17,6 +43,20 @@ let streak = 0;
 let countdownId = null;
 let timeLeft = TIMER_LIMIT;
 let highScores = [];
+let highScoresByDifficulty = {};
+let currentGame = "who-is";
+let currentDifficulty = 4;
+let currentQuestionType = "who-is";
+let currentOptions = [];
+let attempts = [];
+const initialLink = Array.from(gameLinks).find((link) => link.classList.contains("active")) || gameLinks[0];
+if (initialLink && initialLink.dataset.game) {
+    currentGame = initialLink.dataset.game;
+}
+if (difficultySlider && difficultySlider.value) {
+    currentDifficulty = Number(difficultySlider.value);
+    if (difficultyValueEl) difficultyValueEl.textContent = String(currentDifficulty);
+}
 
 async function fetchJSON(url, options) {
     const resp = await fetch(url, options);
@@ -27,6 +67,13 @@ async function fetchJSON(url, options) {
     return resp.json();
 }
 
+function updateGameCopy(mode) {
+    const copy = GAME_COPY[mode] || GAME_COPY["who-is"];
+    if (titleEl) titleEl.textContent = copy.title;
+    if (ledeEl) ledeEl.textContent = copy.lede;
+    if (promptEl) promptEl.textContent = copy.prompt;
+}
+
 function renderStatus(text, positive = false, negative = false) {
     statusEl.textContent = text;
     statusEl.classList.toggle("positive", positive);
@@ -34,7 +81,8 @@ function renderStatus(text, positive = false, negative = false) {
 }
 
 function renderStreak() {
-    streakEl.textContent = `Röð rétt svarað: ${streak}`;
+    const copy = GAME_COPY[currentGame] || GAME_COPY["who-is"];
+    streakEl.textContent = `Röð rétt svarað: ${streak} — ${copy.title} (${currentDifficulty} valk.)`;
 }
 
 function renderTimer() {
@@ -49,35 +97,99 @@ function renderTimer() {
 function renderHighScore() {
     const best = highScores[0];
     if (!highScoreEl) return;
-    highScoreEl.textContent = best ? `Flest rétt: ${best.score} — ${best.initials}` : "Lengsta röð: 0 — ---";
+    const copy = GAME_COPY[currentGame] || GAME_COPY["who-is"];
+    const label = `${currentDifficulty} valk. — ${copy.title}`;
+    highScoreEl.textContent = best
+        ? `Flest rétt (${label}): ${best.score} — ${best.initials}`
+        : `Lengsta röð (${label}): 0 — ---`;
 }
 
 function renderLeaderboard() {
-    if (!leaderboardList) return;
-    leaderboardList.innerHTML = "";
-    if (!highScores.length) {
-        const li = document.createElement("li");
-        li.textContent = "Engin met enn. Prófaðu!";
-        leaderboardList.appendChild(li);
-        return;
-    }
+    if (!leaderboardGrid) return;
+    leaderboardGrid.innerHTML = "";
+    const copy = GAME_COPY[currentGame] || GAME_COPY["who-is"];
 
-    highScores.forEach((entry) => {
-        const li = document.createElement("li");
-        const nameSpan = document.createElement("span");
-        nameSpan.textContent = entry.initials;
-        const scoreSpan = document.createElement("span");
-        scoreSpan.textContent = entry.score;
-        li.appendChild(nameSpan);
-        li.appendChild(scoreSpan);
-        leaderboardList.appendChild(li);
+    DIFFICULTIES.forEach((diff) => {
+        const col = document.createElement("div");
+        col.className = "leaderboard-col";
+        const heading = document.createElement("p");
+        heading.className = "leaderboard-col-title";
+        heading.textContent = `${diff} valk. — ${copy.title}`;
+        col.appendChild(heading);
+
+        const list = document.createElement("ol");
+        list.className = "leaderboard-list";
+        const rows = highScoresByDifficulty[diff] || [];
+
+        if (!rows.length) {
+            const li = document.createElement("li");
+            li.textContent = "Engin met enn.";
+            list.appendChild(li);
+        } else {
+            rows.forEach((entry) => {
+                const li = document.createElement("li");
+                const nameSpan = document.createElement("span");
+                nameSpan.textContent = entry.initials;
+                const scoreSpan = document.createElement("span");
+                scoreSpan.textContent = entry.score;
+                li.appendChild(nameSpan);
+                li.appendChild(scoreSpan);
+                list.appendChild(li);
+            });
+        }
+
+        col.appendChild(list);
+        leaderboardGrid.appendChild(col);
     });
 }
 
+function renderAttempts() {
+    if (!attemptsList) return;
+    attemptsList.innerHTML = "";
+    if (!attempts.length) {
+        const li = document.createElement("li");
+        li.textContent = "Engar tilraunir í þessari lotu enn.";
+        attemptsList.appendChild(li);
+        return;
+    }
+
+    attempts
+        .slice(-15)
+        .reverse()
+        .forEach((item) => {
+            const li = document.createElement("li");
+            const left = document.createElement("span");
+            left.textContent = item.label;
+            const tag = document.createElement("span");
+            tag.className = "tag";
+            tag.textContent = item.question_type === "party" ? "Þingflokkur" : "Þingmaður";
+            left.appendChild(document.createTextNode(" "));
+            left.appendChild(tag);
+
+            const res = document.createElement("span");
+            res.className = `result ${item.correct ? "correct" : "wrong"}`;
+            res.textContent = item.correct ? "Rétt" : "Rangt";
+
+            li.appendChild(left);
+            li.appendChild(res);
+            attemptsList.appendChild(li);
+        });
+}
+
 async function fetchHighScores() {
+    highScores = [];
+    highScoresByDifficulty = {};
     try {
-        const data = await fetchJSON(`${basePath}/api/high-scores`);
-        highScores = data.high_scores || [];
+        const requests = DIFFICULTIES.map(async (diff) => {
+            const params = new URLSearchParams({
+                game: currentGame,
+                difficulty: String(diff),
+            });
+            const data = await fetchJSON(`${basePath}/api/high-scores?${params.toString()}`);
+            highScoresByDifficulty[diff] = data.high_scores || [];
+        });
+        await Promise.all(requests);
+        highScores = highScoresByDifficulty[currentDifficulty] || [];
     } catch (err) {
         renderStatus(err.message || "Gat ekki sótt lengstu röð.", false, true);
     } finally {
@@ -90,9 +202,11 @@ async function submitHighScore(score, initials) {
     const data = await fetchJSON(`${basePath}/api/high-scores`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ score, initials }),
+        body: JSON.stringify({ score, initials, game: currentGame, difficulty: currentDifficulty }),
     });
-    highScores = data.high_scores || highScores;
+    const updated = data.high_scores || highScores;
+    highScoresByDifficulty[currentDifficulty] = updated;
+    highScores = updated;
     renderHighScore();
     renderLeaderboard();
 }
@@ -166,12 +280,13 @@ async function handleTimeout() {
 function resetState() {
     locked = false;
     currentToken = null;
+    currentQuestionType = currentGame;
+    currentOptions = [];
     clearTimer();
     timeLeft = TIMER_LIMIT;
-    renderStatus("Veldu nafn til að byrja.");
+    renderStatus("Veldu svar til að byrja.");
     nextButton.disabled = true;
     optionsEl.innerHTML = "";
-    photo.src = "";
     photo.alt = "";
     renderTimer();
 }
@@ -179,16 +294,26 @@ function resetState() {
 async function loadQuestion() {
     resetState();
     try {
-        const data = await fetchJSON(`${basePath}/api/question`);
+        const params = new URLSearchParams({
+            game: currentGame,
+            difficulty: String(currentDifficulty),
+        });
+        const data = await fetchJSON(`${basePath}/api/question?${params.toString()}`);
         currentToken = data.token;
-        photo.src = data.image_url;
-        photo.alt = "Mynd af þingmanni. Veldu nafnið.";
+        currentQuestionType = data.question_type;
+        if (promptEl && data.prompt) {
+            promptEl.textContent = data.prompt;
+        }
 
-        data.options.forEach((option) => {
+        photo.src = data.image_url;
+        photo.alt = "Mynd af þingmanni. Veldu rétt svar.";
+
+        currentOptions = data.options || [];
+        currentOptions.forEach((option) => {
             const btn = document.createElement("button");
             btn.className = "option";
             btn.type = "button";
-            btn.textContent = option.name;
+            btn.textContent = option.label;
             btn.dataset.id = option.id;
             btn.addEventListener("click", () => handleGuess(btn, option.id));
             optionsEl.appendChild(btn);
@@ -213,8 +338,8 @@ async function handleGuess(button, guessId) {
 
         const buttons = Array.from(optionsEl.querySelectorAll("button.option"));
         buttons.forEach((btn) => {
-            const id = Number(btn.dataset.id);
-            if (id === result.answer_id) {
+            const id = String(btn.dataset.id);
+            if (id === String(result.answer_id)) {
                 btn.classList.add("correct");
             }
             btn.disabled = true;
@@ -233,6 +358,13 @@ async function handleGuess(button, guessId) {
             renderStatus("Rétt svar! Vel gert.", true, false);
             renderStreak();
         }
+        const correctLabel = (currentOptions.find((opt) => String(opt.id) === String(result.answer_id)) || {}).label;
+        attempts.push({
+            correct: !!result.correct,
+            question_type: currentQuestionType,
+            label: correctLabel || button.textContent || "Óþekkt",
+        });
+        renderAttempts();
     } catch (err) {
         renderStatus(err.message || "Villa kom upp við að senda ágiskun.", false, true);
     } finally {
@@ -240,8 +372,52 @@ async function handleGuess(button, guessId) {
     }
 }
 
+function setActiveGame(game) {
+    currentGame = game;
+    gameLinks.forEach((link) => {
+        const isActive = link.dataset.game === game;
+        link.classList.toggle("active", isActive);
+    });
+    updateGameCopy(currentGame);
+    streak = 0;
+    renderStreak();
+    fetchHighScores();
+    loadQuestion();
+}
+
+function onDifficultyChange(value) {
+    currentDifficulty = Number(value || 4);
+    if (difficultyValueEl) difficultyValueEl.textContent = String(currentDifficulty);
+    streak = 0;
+    renderStreak();
+    fetchHighScores();
+    loadQuestion();
+}
+
+updateGameCopy(currentGame);
+if (gameLinks.length) {
+    gameLinks.forEach((link) => {
+        link.addEventListener("click", (event) => {
+            event.preventDefault();
+            const game = link.dataset.game || "who-is";
+            setActiveGame(game);
+        });
+    });
+}
+if (difficultySlider) {
+    difficultySlider.addEventListener("input", (event) => {
+        onDifficultyChange(event.target.value);
+    });
+}
+if (clearAttemptsBtn) {
+    clearAttemptsBtn.addEventListener("click", () => {
+        attempts = [];
+        renderAttempts();
+    });
+}
 nextButton.addEventListener("click", loadQuestion);
 renderStreak();
 renderTimer();
 fetchHighScores();
+renderAttempts();
 loadQuestion();
