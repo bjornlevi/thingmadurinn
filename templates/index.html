@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Hver er þingmaðurinn?</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=asset_version) }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico', v=asset_version) }}" type="image/x-icon" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico', v=asset_version) }}" type="image/x-icon" />
 </head>
 <body data-base="{{ request.script_root|default('') }}">
 <main class="page">
