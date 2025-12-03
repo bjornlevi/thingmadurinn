@@ -27,3 +27,7 @@ Opnaðu síðan `http://localhost:5000`.
 - `app.py` — Flask-bakendi með JSON-vistum fyrir spurningar/agískanir.
 - `templates/index.html` — viðmót.
 - `static/style.css` & `static/app.js` — stílar og lógík klientsins.
+
+## Ný valmöguleg leikgerð
+- Veldu leikgerð: „Hver er þingmaðurinn?“, „Í hvaða þingflokki var þingmaðurinn?“ eða blanda („Þekkir þú þingmennina?“).
+- Veldu erfiðleikastig með 2–6 svarmöguleikum. Hver samsetning hefur sitt eigið stigatöfluborð.

@@ -401,6 +401,11 @@ button:disabled {
     color: #f87171;
 }
 
+/* Hide legacy question-type tags if they ever appear */
+.attempts-list .tag {
+    display: none;
+}
+
 .ghost.small {
     padding: 6px 10px;
     font-size: 0.85rem;

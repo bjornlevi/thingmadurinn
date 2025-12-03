@@ -75,12 +75,14 @@ function updateGameCopy(mode) {
 }
 
 function renderStatus(text, positive = false, negative = false) {
+    if (!statusEl) return;
     statusEl.textContent = text;
     statusEl.classList.toggle("positive", positive);
     statusEl.classList.toggle("negative", negative);
 }
 
 function renderStreak() {
+    if (!streakEl) return;
     const copy = GAME_COPY[currentGame] || GAME_COPY["who-is"];
     streakEl.textContent = `Röð rétt svarað: ${streak} — ${copy.title} (${currentDifficulty} valk.)`;
 }
@@ -209,6 +211,8 @@ async function submitHighScore(score, initials) {
     highScores = updated;
     renderHighScore();
     renderLeaderboard();
+    // Refresh all difficulty columns to keep the grid accurate.
+    fetchHighScores().catch(() => {});
 }
 
 function requestInitials(defaultValue = "---") {
